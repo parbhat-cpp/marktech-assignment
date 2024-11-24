@@ -11,6 +11,8 @@ export const postComment = async (req: VerifiedRequest, res: Response) => {
 
     try {
         const id = req.user._id;
+        const user = req.user;
+
         const socket: SocketIO.Server = req.app.get("socket");
 
         const { post_id, comment } = req.body;
@@ -31,6 +33,7 @@ export const postComment = async (req: VerifiedRequest, res: Response) => {
             return;
         }
 
+        // check if post exists
         const postExists = await Post.findOne({
             _id: post_id
         });
@@ -43,8 +46,7 @@ export const postComment = async (req: VerifiedRequest, res: Response) => {
             return;
         }
 
-        const postOwnerId = postExists.userId;
-
+        // add comment to the post
         const postNewComment = new Comment({
             userId: id,
             comment: comment,
@@ -53,6 +55,19 @@ export const postComment = async (req: VerifiedRequest, res: Response) => {
         postNewComment.save();
         postExists.comments.push(postNewComment._id);
         postExists.save();
+
+        // after saving comment send notification to the user who uploaded the post
+        const postOwnerId = req.app.locals.userState.users[postExists.userId];
+
+        socket.to(postOwnerId).emit("notify-comment", {
+            commentedBy: {
+                username: user?.username,
+                fullname: user?.fullname,
+            },
+            commentedAt: new Date(),
+            postId: postExists._id,
+            postTitle: postExists.title,
+        });
 
         apiResponse.data = ['Comment posted'];
         apiResponse.status_code = httpStatus.CREATED;
