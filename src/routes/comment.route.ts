@@ -1,6 +1,6 @@
 import express from 'express';
-import { isAuth } from '../../middlewares/is-auth';
-import { postComment } from '../../controller/comment.controller';
+import { isAuth } from '../middlewares/is-auth';
+import { postComment } from '../controller/comment.controller';
 
 const router = express.Router();
 
