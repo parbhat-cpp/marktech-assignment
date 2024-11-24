@@ -29,6 +29,7 @@ export const createPost = async (req: VerifiedRequest, res: Response) => {
             return;
         }
 
+        // creating new post
         const createNewPost = new Post({
             userId: userId,
             title: title,
@@ -36,6 +37,7 @@ export const createPost = async (req: VerifiedRequest, res: Response) => {
             content: content,
         });
 
+        // save post
         createNewPost.save();
 
         apiResponse.data = ['Uploaded new post'];

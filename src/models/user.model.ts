@@ -30,6 +30,7 @@ const userSchema = new Schema<IUser>({
     },
 }, { timestamps: true });
 
+// hash password before saving
 userSchema.pre("save", async function(next) {
     if (!this.isModified("password")) {
         next();
@@ -45,6 +46,7 @@ userSchema.pre("save", async function(next) {
     }
 });
 
+// method to check if password is correct
 userSchema.methods.isPasswordMatch = async function (password: string) {
     const user = this;
     return bcrypt.compare(password, user.password);
