@@ -4,7 +4,7 @@ import { createServer, Server } from "http";
 import cors from "cors";
 
 import config from '../common/config';
-import routes from "../routes/rest";
+import routes from "../routes";
 import { routeNotFound } from '../middlewares/route-not-found';
 
 class ExpressServer {
@@ -22,6 +22,11 @@ class ExpressServer {
         this._app.use(express.urlencoded({ extended: false }));
         this._app.use(express.json());
         this._app.use(cors());
+
+        // manage users between express and socket server
+        this._app.locals.userState = {
+            users: {}
+        }
 
         this._app.use('/api', routes);
         this._app.use("*", routeNotFound);
@@ -50,6 +55,10 @@ class ExpressServer {
 
     get server(): Server {
         return this._server;
+    }
+
+    get app(): express.Application {
+        return this._app;
     }
 }
 

@@ -4,18 +4,20 @@ import jwt from "jsonwebtoken";
 
 import config from '../common/config';
 import { VerifiedSocket } from '../common/types';
-import { socketHandler } from '../routes/socket';
 
 class SocketServer {
     private _io!: SocketIO.Server;
+    public sharedUserState: any;
 
-    public constructor(server: Server) {
+    public constructor(server: Server, sharedUserState: any) {
         this._io = new SocketIO.Server(server, {
             cors: {
                 origin: config.SOCKET_URL,
                 methods: ['GET', 'POST'],
             }
         });
+
+        this.sharedUserState = sharedUserState;
 
         this.listen();
     }
@@ -42,7 +44,39 @@ class SocketServer {
             console.log("Socket Server running on port:", config.SOCKET_PORT);
 
             this._io.listen(config.SOCKET_PORT);
-            this._io.on("connection", socketHandler);
+            this._io.on("connection", (socket: VerifiedSocket) => {
+                const currentUser = socket.decoded;
+                const currentUserId = currentUser._id;
+
+                this.sharedUserState.users[currentUserId] = socket.id;
+
+                // basic chat implementation
+                socket.on("send-message", (receivingUserId, message) => {
+                    const receiverSocketId = this.sharedUserState.users[receivingUserId] as string;
+
+                    if (!message) {
+                        // send to sending user
+                        socket.emit("empty-message", { "error": "empty message" });
+                        return;
+                    }
+
+                    if (!receiverSocketId) {
+                        socket.emit("user-not-active", { "message": "receiving user not active right" });
+                        return;
+                    }
+
+                    socket.to(receiverSocketId).emit("receive-message", {
+                        _id: currentUser?._id,
+                        username: currentUser?.username,
+                        fullname: currentUser?.fullname,
+                        message: message,
+                    });
+                });
+
+                socket.on("disconnect", () => {
+                    delete this.sharedUserState.users[currentUserId];
+                });
+            });
         }
     }
 
